@@ -1,23 +1,27 @@
 #include <Wire.h>
 
+#if (ARDUINO >= 100)
 #include <Arduino.h>
-#include <main.cpp>
-// #define Wire.write(x) Wire.send(x)
-// #define Wire.read() Wire.receive()
+#else
+#include <WProgram.h>
+//#define Wire.write(x) Wire.send(x)
+//#define Wire.read() Wire.receive()
+#endif
+
 
 
 static uint8_t nunchuck_buf[6];   // array to store nunchuck data,
 
-// // Uses port C (analog in) pins as power & ground for Nunchuck
-// static void nunchuck_setpowerpins()
-// {
-//   #define pwrpin PORTC3
-//   #define gndpin PORTC2
-//     DDRC |= _BV(pwrpin) | _BV(gndpin);
-//     PORTC &= ~ _BV(gndpin);
-//     PORTC |=  _BV(pwrpin);
-//     delay(100);  // wait for things to stabilize
-// }
+// Uses port C (analog in) pins as power & ground for Nunchuck
+static void nunchuck_setpowerpins()
+{
+#define pwrpin PORTC3
+#define gndpin PORTC2
+  DDRC |= _BV(pwrpin) | _BV(gndpin);
+  PORTC &= ~ _BV(gndpin);
+  PORTC |=  _BV(pwrpin);
+  delay(100);  // wait for things to stabilize
+}
 
 // initialize the I2C system, join the I2C bus,
 // and tell the nunchuck we're talking to it
@@ -25,8 +29,13 @@ static void nunchuck_init()
 {
   Wire.begin();                // join i2c bus as master
   Wire.beginTransmission(0x52);// transmit to device 0x52
+#if (ARDUINO >= 100)
   Wire.write((uint8_t)0x40);// sends memory address
   Wire.write((uint8_t)0x00);// sends sent a zero.
+#else
+  Wire.send((uint8_t)0x40);// sends memory address
+  Wire.send((uint8_t)0x00);// sends sent a zero.
+#endif
   Wire.endTransmission();// stop transmitting
 }
 
@@ -35,8 +44,11 @@ static void nunchuck_init()
 static void nunchuck_send_request()
 {
   Wire.beginTransmission(0x52);// transmit to device 0x52
-
+#if (ARDUINO >= 100)
   Wire.write((uint8_t)0x00);// sends one byte
+#else
+  Wire.send((uint8_t)0x00);// sends one byte
+#endif
   Wire.endTransmission();// stop transmitting
 }
 
@@ -56,7 +68,12 @@ static int nunchuck_get_data()
   Wire.requestFrom (0x52, 6);// request data from nunchuck
   while (Wire.available ()) {
     // receive byte as an integer
+#if (ARDUINO >= 100)
     nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.read() );
+#else
+    nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.receive() );
+#endif
+    cnt++;
   }
   nunchuck_send_request();  // send request for next data payload
   // If we recieved the 6 bytes, then go print them
@@ -192,11 +209,13 @@ void _print() {
   Serial.print("\tY Accel:  ");
   Serial.print(accy);
   Serial.println("\tZ Accel:  ");
+  Serial.print(accz);
+  Serial.print("\n");
 }
 
 void setup() {
   Serial.begin(9600);
-  // nunchuck_setpowerpins();
+  nunchuck_setpowerpins();
   nunchuck_init(); // send the initilization handshake
   Serial.println("Wii Nunchuck Ready");
 }
@@ -218,6 +237,6 @@ void loop() {
     _print();
   }
   loop_cnt++;
-  delay(1);
+  delay(100);
 
 }
