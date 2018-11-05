@@ -1,54 +1,24 @@
 #include <Wire.h>
 
-#if (ARDUINO >= 100)
 #include <Arduino.h>
-#else
-#include <WProgram.h>
-//#define Wire.write(x) Wire.send(x)
-//#define Wire.read() Wire.receive()
-#endif
 
+static uint8_t nunchuck_buf[6];   // array to store nunchuck data
 
-
-static uint8_t nunchuck_buf[6];   // array to store nunchuck data,
-
-// Uses port C (analog in) pins as power & ground for Nunchuck
-static void nunchuck_setpowerpins()
-{
-#define pwrpin PORTC3
-#define gndpin PORTC2
-  DDRC |= _BV(pwrpin) | _BV(gndpin);
-  PORTC &= ~ _BV(gndpin);
-  PORTC |=  _BV(pwrpin);
-  delay(100);  // wait for things to stabilize
-}
-
-// initialize the I2C system, join the I2C bus,
-// and tell the nunchuck we're talking to it
+// sends handshake signal to WII Nunchuck
 static void nunchuck_init()
 {
-  Wire.begin();                // join i2c bus as master
-  Wire.beginTransmission(0x52);// transmit to device 0x52
-#if (ARDUINO >= 100)
+  Wire.begin();
+  Wire.beginTransmission(0x52);// transmit 0x52
   Wire.write((uint8_t)0x40);// sends memory address
-  Wire.write((uint8_t)0x00);// sends sent a zero.
-#else
-  Wire.send((uint8_t)0x40);// sends memory address
-  Wire.send((uint8_t)0x00);// sends sent a zero.
-#endif
+  Wire.write((uint8_t)0x00);// sends sent a zero
   Wire.endTransmission();// stop transmitting
 }
 
 // Send a request for data to the nunchuck
-// was "send_zero()"
 static void nunchuck_send_request()
 {
   Wire.beginTransmission(0x52);// transmit to device 0x52
-#if (ARDUINO >= 100)
   Wire.write((uint8_t)0x00);// sends one byte
-#else
-  Wire.send((uint8_t)0x00);// sends one byte
-#endif
   Wire.endTransmission();// stop transmitting
 }
 
@@ -68,11 +38,7 @@ static int nunchuck_get_data()
   Wire.requestFrom (0x52, 6);// request data from nunchuck
   while (Wire.available ()) {
     // receive byte as an integer
-#if (ARDUINO >= 100)
     nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.read() );
-#else
-    nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.receive() );
-#endif
     cnt++;
   }
   nunchuck_send_request();  // send request for next data payload
@@ -83,71 +49,7 @@ static int nunchuck_get_data()
   return 0; //failure
 }
 
-// Print the input data we have recieved
-// accel data is 10 bits long
-// so we read 8 bits, then we have to add
-// on the last 2 bits.  That is why I
-// multiply them by 2 * 2
-static void nunchuck_print_data()
-{
-  static int i = 0;
-  int joy_x_axis = nunchuck_buf[0];
-  int joy_y_axis = nunchuck_buf[1];
-  int accel_x_axis = nunchuck_buf[2]; // * 2 * 2;
-  int accel_y_axis = nunchuck_buf[3]; // * 2 * 2;
-  int accel_z_axis = nunchuck_buf[4]; // * 2 * 2;
 
-  int z_button = 0;
-  int c_button = 0;
-
-  // byte nunchuck_buf[5] contains bits for z and c buttons
-  // it also contains the least significant bits for the accelerometer data
-  // so we have to check each bit of byte outbuf[5]
-  if ((nunchuck_buf[5] >> 0) & 1)
-    z_button = 1;
-  if ((nunchuck_buf[5] >> 1) & 1)
-    c_button = 1;
-
-  if ((nunchuck_buf[5] >> 2) & 1)
-    accel_x_axis += 1;
-  if ((nunchuck_buf[5] >> 3) & 1)
-    accel_x_axis += 2;
-
-  if ((nunchuck_buf[5] >> 4) & 1)
-    accel_y_axis += 1;
-  if ((nunchuck_buf[5] >> 5) & 1)
-    accel_y_axis += 2;
-
-  if ((nunchuck_buf[5] >> 6) & 1)
-    accel_z_axis += 1;
-  if ((nunchuck_buf[5] >> 7) & 1)
-    accel_z_axis += 2;
-
-  Serial.print(i, DEC);
-  Serial.print("\t");
-
-  Serial.print("joy:");
-  Serial.print(joy_x_axis, DEC);
-  Serial.print(",");
-  Serial.print(joy_y_axis, DEC);
-  Serial.print("  \t");
-
-  Serial.print("acc:");
-  Serial.print(accel_x_axis, DEC);
-  Serial.print(",");
-  Serial.print(accel_y_axis, DEC);
-  Serial.print(",");
-  Serial.print(accel_z_axis, DEC);
-  Serial.print("\t");
-
-  Serial.print("but:");
-  Serial.print(z_button, DEC);
-  Serial.print(",");
-  Serial.print(c_button, DEC);
-
-  Serial.print("\r\n");  // newline
-  i++;
-}
 
 // returns zbutton state: 1=pressed, 0=notpressed
 static int nunchuck_zbutton()
@@ -195,7 +97,7 @@ int loop_cnt = 0;
 
 byte joyx, joyy, zbut, cbut, accx, accy, accz;
 
-void _print() {
+void print_data() {
   Serial.print("Z Button:  ");
   Serial.print(zbut);
   Serial.print("\tC Button:  ");
@@ -215,7 +117,6 @@ void _print() {
 
 void setup() {
   Serial.begin(9600);
-  nunchuck_setpowerpins();
   nunchuck_init(); // send the initilization handshake
   Serial.println("Wii Nunchuck Ready");
 }
@@ -234,7 +135,7 @@ void loop() {
     accy = nunchuck_accely();   //  65 - 173
     accz = nunchuck_accelz();   //  0 - 255
 
-    _print();
+    print_data();
   }
   loop_cnt++;
   delay(100);
