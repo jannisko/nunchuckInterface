@@ -7,60 +7,58 @@ static uint8_t nunchuck_buf[6];   // array to store nunchuck data
 // sends handshake signal to WII Nunchuck
 static void nunchuck_init()
 {
+  //https://bootlin.com/labs/doc/nunchuk.pdf
   Wire.begin();
-  Wire.beginTransmission(0x52);// transmit 0x52
-  Wire.write((uint8_t)0x40);// sends memory address
-  Wire.write((uint8_t)0x00);// sends sent a zero
-  Wire.endTransmission();// stop transmitting
+  Wire.beginTransmission(0x52);
+  Wire.write((uint8_t)0x40);
+  Wire.write((uint8_t)0x00);
+  Wire.endTransmission();
 }
 
-// Send a request for data to the nunchuck
+// sends a data request to WII Nunchuck
 static void nunchuck_send_request()
 {
-  Wire.beginTransmission(0x52);// transmit to device 0x52
-  Wire.write((uint8_t)0x00);// sends one byte
-  Wire.endTransmission();// stop transmitting
+  //https://bootlin.com/labs/doc/nunchuk.pdf
+  Wire.beginTransmission(0x52);
+  Wire.write((uint8_t)0x00);
+  Wire.endTransmission();
 }
 
-// Encode data to format that most wiimote drivers except
-// only needed if you use one of the regular wiimote drivers
 static char nunchuk_decode_byte (char x)
 {
-  x = (x ^ 0x17) + 0x17;
+  x = (x ^ 0x17) + 0x17; // data XOR with 10111 (magic)
   return x;
 }
 
-// Receive data back from the nunchuck,
-// returns 1 on successful read. returns 0 on failure
+// Receive data from nunchuck
+// returns 1 if success, 0 if failure
 static int nunchuck_get_data()
 {
   int cnt = 0;
-  Wire.requestFrom (0x52, 6);// request data from nunchuck
+  Wire.requestFrom (0x52, 6); // request 6 bytes
   while (Wire.available ()) {
-    // receive byte as an integer
     nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.read() );
     cnt++;
   }
-  nunchuck_send_request();  // send request for next data payload
-  // If we recieved the 6 bytes, then go print them
+
+  nunchuck_send_request();  // send request for next nunchuck_get_data
+  // success if 6 bytes received
   if (cnt >= 5) {
-    return 1;   // success
+    return 1;
   }
-  return 0; //failure
+  return 0;
 }
 
-
-
-// returns zbutton state: 1=pressed, 0=notpressed
+// returns zbutton state 0/1
 static int nunchuck_zbutton()
 {
-  return ((nunchuck_buf[5] >> 0) & 1) ? 0 : 1;  // voodoo
+  return ((nunchuck_buf[5] >> 0) & 1) ? 0 : 1;  // checks the first bit and returns it
 }
 
-// returns zbutton state: 1=pressed, 0=notpressed
+// returns cbutton state 0/1
 static int nunchuck_cbutton()
 {
-  return ((nunchuck_buf[5] >> 1) & 1) ? 0 : 1;  // voodoo
+  return ((nunchuck_buf[5] >> 1) & 1) ? 0 : 1;  // checks the second bit and returns it
 }
 
 // returns value of x-axis joystick
@@ -78,19 +76,21 @@ static int nunchuck_joyy()
 // returns value of x-axis accelerometer
 static int nunchuck_accelx()
 {
-  return nunchuck_buf[2];   // FIXME: this leaves out 2-bits of the data
+  // bit 9-2 are at buf[2], bit 1-0 are at buf[5]
+  // https://bootlin.com/labs/doc/nunchuk.pdf
+  return (nunchuck_buf[2] << 2) | ((nunchuck_buf[5] >> 2) & 0x03);   
 }
 
 // returns value of y-axis accelerometer
 static int nunchuck_accely()
 {
-  return nunchuck_buf[3];   // FIXME: this leaves out 2-bits of the data
+  return (nunchuck_buf[3] << 2) | ((nunchuck_buf[5] >> 4) & 0x03);
 }
 
 // returns value of z-axis accelerometer
 static int nunchuck_accelz()
 {
-  return nunchuck_buf[4];   // FIXME: this leaves out 2-bits of the data
+  return (nunchuck_buf[4] << 2) | ((nunchuck_buf[5] >> 6) & 0x03);
 }
 
 int loop_cnt = 0;
