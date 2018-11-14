@@ -96,15 +96,18 @@ static int nunchuck_accelz()
 
 int loop_cnt = 0;
 
-byte joyx, joyy, zbut, cbut, accx, accy, accz;
+byte joyx, joyy;
+bool zbut, cbut; 
+int16_t accx, accy, accz;
 
 void print_data() {
 
-  Serial.flush();
+  Serial.print("--------------------\n");
 
   for(int y=0;y<8;y++){
     for(int x=0;x<8;x++){
-      Serial.print(data_arr[x][y] + " ");
+      Serial.print(data_arr[x][y] ? 1 : 0);
+      Serial.print(" ");
     }
     Serial.print("\n");
   }
@@ -114,9 +117,9 @@ void print_data() {
   // Serial.print("\tC Button:  ");
   // Serial.print(cbut);
   // Serial.print("\tX Joy:  ");
-  // Serial.print(map(joyx, 15, 221, 0, 255));
+  // Serial.print(joyx);
   // Serial.print("\tY Joy:  ");
-  // Serial.print(map(joyy, 29, 229, 0, 255));
+  // Serial.print(joyy);
   // Serial.print("\tX Accel:  ");
   // Serial.print(accx);
   // Serial.print("\tY Accel:  ");
@@ -127,9 +130,16 @@ void print_data() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   nunchuck_init(); // send the initilization handshake
   Serial.println("Wii Nunchuck Ready");
+
+  for(int x=0;x<8;x++){
+    for(int y=0;y<8;y++){
+      data_arr[x][y]=false;
+    }
+  }
+
 }
 
 void loop() {
@@ -140,20 +150,24 @@ void loop() {
 
     zbut = nunchuck_zbutton();  //  0 - 1
     cbut = nunchuck_cbutton();  //  0 - 1
-    joyx = nunchuck_joyx();     //  15 - 221
-    joyy = nunchuck_joyy();     //  29 - 229
-    accx = nunchuck_accelx();   //  70 - 182
-    accy = nunchuck_accely();   //  65 - 173
-    accz = nunchuck_accelz();   //  0 - 255
+    joyx = nunchuck_joyx();     //  0 - 255
+    joyy = nunchuck_joyy();     //  0 - 255
+    accx = nunchuck_accelx();   //  0 - 1024
+    accy = nunchuck_accely();   //  0 - 1024
+    accz = nunchuck_accelz();   //  0 - 1024
 
     // map the joy values to 0-2
-    joyx = map(joyx,0,255,0,2);
-    joyy = map(joyy,0,255,0,2);
+    // last integer of the map function begins at upper bound
+    // so 3 only shows up at 1024 (which is stupid)
+    joyx = map(joyx,0,255,0,3);
+    joyy = map(joyy,0,255,0,3);
 
     // map the accel values to 0-4
-    accx = map(accx,0,1024,0,4);
-    accy = map(accy,0,1024,0,4);
-    accz = map(accz,0,1024,0,4);
+    // last integer of the map function begins at upper bound
+    // so 5 only shows up at 1024 (which is stupid)
+    accx = map(accx,0,1024,0,5);
+    accy = map(accy,0,1024,0,5);
+    accz = map(accz,0,1024,0,5);
 
     for(int x=0; x<3; x++){
       for(int y=0; y<3; y++){
