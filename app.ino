@@ -98,6 +98,7 @@ int loop_cnt = 0;
 
 byte joyx, joyy;
 bool zbut, cbut; 
+// acceleration is 10 bit long
 int16_t accx, accy, accz;
 
 void print_data() {
@@ -134,6 +135,7 @@ void setup() {
   nunchuck_init(); // send the initilization handshake
   Serial.println("Wii Nunchuck Ready");
 
+  // fill array with 0
   for(int x=0;x<8;x++){
     for(int y=0;y<8;y++){
       data_arr[x][y]=false;
