@@ -14,3 +14,6 @@ Top Left: A5
 Top Right: Ground
 Bottom Left: 5V
 Bottom Right: A4
+
+--------------- DOKU -------------
+https://docs.google.com/document/d/17sPhZmqco-ob9_1tqnieoP1NTAr2UnXE5XqWIMpFRbY/edit?usp=sharing
