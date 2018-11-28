@@ -30,9 +30,9 @@ void setup()
     Nunchuck::handshake();
     Serial.println("Wii Nunchuck Ready");
 
-// Receive data from nunchuck
-// returns 1 if success, 0 if failure
-static int nunchuck_get_data()
+    // init LCD
+    LCD::init();
+    Serial.println("LCD Ready");
 }
 
 int loop_cnt = 0;
@@ -41,8 +41,8 @@ void loop()
     if (loop_cnt % 10 == 0) { // every 100 msecs get new data
         Nunchuck::Data newData = Nunchuck::getNewData();
 
-// returns value of x-axis accelerometer
-static int nunchuck_accelx()
+        LCD::setData(newData);
+        LCD::refresh();
 
         if (loop_cnt % 100 == 0) {
             print_data_text(newData);
