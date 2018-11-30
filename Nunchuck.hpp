@@ -1,10 +1,11 @@
 #ifndef NUNCHUCK_H
 #define NUNCHUCK_H 1
 
+#include <Arduino.h> // used for serial
 #include <Wire.h>
 #include <inttypes.h>
-#include <Arduino.h> // used for serial
 
+// everything related to talking with the Wii Nunchuck
 namespace Nunchuck {
 
 // data structure for holding nunchuck result
@@ -16,6 +17,8 @@ struct Data {
 
 // send the initilization handshake
 void handshake();
+
+// request and read new data
 Data getNewData();
 }
 

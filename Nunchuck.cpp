@@ -3,7 +3,7 @@
 // everything related to talking with the nunchuck
 namespace Nunchuck {
 
-// make those things invisible to outside of the namespace
+// anonymous namespace -> everything inside Nunchuck can see the contents, everything outside cannot
 namespace {
     // array to store nunchuck data
     uint8_t buf[6];

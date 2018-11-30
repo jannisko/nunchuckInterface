@@ -1,46 +1,55 @@
 #include "LCD.hpp"
-
+// main documentation in LCD.hpp
 namespace LCD {
 
+// anonymous namespace -> everything inside LCD can see the contents, everything outside cannot
 namespace {
     // object for controlling lcd screen
     LiquidCrystal_I2C lcd(adress, 16, 2);
 
-    Nunchuck::Data data;
-    DisplayMode displayMode;
+    Nunchuck::Data data; // currently displayed data
+    DisplayMode displayMode; // current display mode
     bool buttonPressed = false; // set to true by interrupt, reset to false by refresh
 
     // switch between the to views
     void setDisplayMode(DisplayMode mode)
     {
+        if (displayMode != mode) {
+            // clear screen on display mode change
+            lcd.clear();
+        }
+
         displayMode = mode;
-        lcd.clear();
     }
 
     unsigned long lastDebounceTime = 0;
-    void debounce_onButtonPress()
+    void buttonISR() // executed on button pin change
     {
-        unsigned long time = millis();
-        if ((time - lastDebounceTime) > 200 && digitalRead(buttonPin) == HIGH) {
-            buttonPressed = true;
-            lastDebounceTime = time;
+        unsigned long time = millis(); // get current time
+        // if last rise was more than 200ms ago
+        if ((time - lastDebounceTime) > 200) {
+            buttonPressed = true; // set flag that btn was pressed
+            lastDebounceTime = time; // save the time of the rise
         }
     }
 
+    // init button, setup interrupt
     void setupButton()
     {
         pinMode(buttonPin, INPUT);
         attachInterrupt(
             digitalPinToInterrupt(buttonPin),
-            debounce_onButtonPress,
+            buttonISR,
             RISING);
     }
 
+    // print some whitespace so left over characters get replaced
     void clearRestOfLine()
     {
         lcd.print("      ");
     }
 
+    // decide between the categorys of joy stick values
     void valToDirection_joy(uint8_t val, char bigChar, char smallChar)
     {
         if (val < 120)
@@ -54,9 +63,9 @@ namespace {
             lcd.print(bigChar);
     }
 
+    // print joy stick postion
     void printJoystick()
     {
-        // print joy stick postion
         lcd.print("Joy: ");
         valToDirection_joy(data.joyy, 'N', 'S');
         valToDirection_joy(data.joyx, 'E', 'W');
@@ -64,13 +73,15 @@ namespace {
         clearRestOfLine();
     }
 
+    // print pressed buttons
     void printButtons()
     {
         lcd.print("Buttons: ");
         if (data.cbut) {
+            // if button pressed print button (duh)
             lcd.print("C");
 
-            if (data.zbut)
+            if (data.zbut) // comma between the buttons if necessary
                 lcd.print(", ");
         }
 
@@ -80,6 +91,7 @@ namespace {
         clearRestOfLine();
     }
 
+    // decide between the categorys of accelerometer data
     void valToDirection_accel(uint16_t val, char* bigText, char* middleText, char* smallText)
     {
         if (val < 450) {
@@ -113,6 +125,7 @@ namespace {
     }
 }
 
+// initialize lcd module
 void init()
 {
     // initialize the LCD
@@ -137,15 +150,18 @@ void refresh()
     // reposition cursor
     lcd.setCursor(0, 0);
 
+    // if a button press is detected by the interrupt, buttonPressed will be true
     if (buttonPressed) {
+        // so we have to change the current display mode to the other one
         displayMode = displayMode == DisplayMode::ACCELEROMETER
             ? DisplayMode::BUTTONS_ANALOGSTICK
             : DisplayMode::ACCELEROMETER;
-        lcd.clear(); // maybe sometimes something could get left over
-        /* Possible race condition with button, but it should be very unlikely  */
+
+        // we did what we had to do on button press, so we have to reset this to false
         buttonPressed = false;
     }
 
+    // print the data according to display mode
     if (displayMode == DisplayMode::ACCELEROMETER) {
         printAccelerometer();
     } else {
