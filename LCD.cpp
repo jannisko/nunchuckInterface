@@ -36,17 +36,9 @@ namespace {
             RISING);
     }
 
-    void valToDirection_accel(uint16_t val, char bigChar, char smallChar)
+    void clearRestOfLine()
     {
-        if (val < 120)
-            lcd.print(smallChar);
-        if (val < 50)
-            lcd.print(smallChar);
-
-        if (val > 130)
-            lcd.print(bigChar);
-        if (val > 205)
-            lcd.print(bigChar);
+        lcd.print("      ");
     }
 
     void valToDirection_joy(uint8_t val, char bigChar, char smallChar)
@@ -69,8 +61,7 @@ namespace {
         valToDirection_joy(data.joyy, 'N', 'S');
         valToDirection_joy(data.joyx, 'E', 'W');
 
-        // clear rest of line
-        lcd.print("      ");
+        clearRestOfLine();
     }
 
     void printButtons()
@@ -86,49 +77,39 @@ namespace {
         if (data.zbut)
             lcd.print("Z");
 
-        // clear rest of line
-        lcd.print("       ");
+        clearRestOfLine();
+    }
+
+    void valToDirection_accel(uint16_t val, char* bigText, char* middleText, char* smallText)
+    {
+        if (val < 450) {
+            lcd.print(smallText);
+        } else if (val < 650) {
+            lcd.print(middleText);
+        } else {
+            lcd.print(bigText);
+        }
     }
 
     // print accelerometer info
     void printAccelerometer()
     {
         // accx
-        lcd.print("Accel-X: ");
-        if (data.accx < 400) {
-            lcd.print("Left");
-        } else if (data.accx < 600) {
-            lcd.print("Middle");
-        } else {
-            lcd.print("Right");
-        }
+        lcd.print("Accel-X=");
+        valToDirection_accel(data.accx, "Right", "Middle", "Left");
 
-        // clear rest of line
-        lcd.print("      ");
+        clearRestOfLine();
+        lcd.setCursor(0, 1);
 
         // accy
-        lcd.setCursor(0, 1);
-        lcd.print("Y: ");
-        if (data.accy < 450){
-            lcd.print("Frnt");
-        } else if (data.accy < 650) {
-            lcd.print("Top");
-        } else {
-            lcd.print("Back");
-        }
+        lcd.print("Y=");
+        valToDirection_accel(data.accy, "Back", "Top", "Front");
 
         // accz
-        lcd.print("  Z: ");
-        if (data.accz < 450){
-            lcd.print("Bot");
-        } else if (data.accz < 650) {
-            lcd.print("Side");
-        } else {
-            lcd.print("Top");
-        }
+        lcd.print(" Z=");
+        valToDirection_accel(data.accz, "Top", "Side", "Bottom");
 
-        // clear rest of line
-        lcd.print("   ");
+        clearRestOfLine();
     }
 }
 
@@ -164,7 +145,6 @@ void refresh()
         /* Possible race condition with button, but it should be very unlikely  */
         buttonPressed = false;
     }
-
 
     if (displayMode == DisplayMode::ACCELEROMETER) {
         printAccelerometer();
