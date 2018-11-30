@@ -24,14 +24,15 @@ void setup()
 {
     // init serial
     Serial.begin(115200);
+    Serial.println("Serial connection ready");
 
     // init nunchuck
     Nunchuck::handshake();
-    Serial.println("Wii Nunchuck Ready");
+    Serial.println("Wii Nunchuck ready");
 
     // init LCD
     LCD::init();
-    Serial.println("LCD Ready");
+    Serial.println("LCD ready");
 }
 
 int loop_cnt = 0;
