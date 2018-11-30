@@ -18,33 +18,13 @@ namespace {
     }
 
     unsigned long lastDebounceTime = 0;
-    int lastButtonState, buttonState;
-    int debounceDelay = 200;
     void debounce_onButtonPress()
     {
-        int reading = digitalRead(buttonPin);
-        if (reading != lastButtonState) {
-            // reset the debouncing timer
-            lastDebounceTime = millis();
+        unsigned long time = millis();
+        if ((time - lastDebounceTime) > 200 && digitalRead(buttonPin) == HIGH) {
+            buttonPressed = true;
+            lastDebounceTime = time;
         }
-
-        if ((millis() - lastDebounceTime) > debounceDelay) {
-            // whatever the reading is at, it's been there for longer than the debounce
-            // delay, so take it as the actual current state:
-
-            // if the button state has changed:
-            if (reading != buttonState) {
-                buttonState = reading;
-
-                // only toggle the LED if the new button state is HIGH
-                if (buttonState == HIGH) {
-                    buttonPressed = true;
-                }
-            }
-        }
-
-        // save the reading. Next time through the loop, it'll be the lastButtonState:
-        lastButtonState = reading;
     }
 
     void setupButton()
@@ -53,28 +33,20 @@ namespace {
         attachInterrupt(
             digitalPinToInterrupt(buttonPin),
             debounce_onButtonPress,
-            FALLING);
+            RISING);
     }
 
-    void valToDirection_int(unsigned int valToPrint, int extreme, char bigChar, char smallChar)
+    void valToDirection_accel(uint16_t val, char bigChar, char smallChar)
     {
-        int val = valToPrint - extreme / 2;
-        if (val > 0) {
-            lcd.print(bigChar);
-            if (val > extreme / 4)
-                lcd.print(bigChar);
-            return;
-        }
-
-        if (val == 0) {
-            lcd.print("0");
-            return;
-        }
-
-        // val < 0
-        lcd.print(smallChar);
-        if (val < -(extreme / 4))
+        if (val < 120)
             lcd.print(smallChar);
+        if (val < 50)
+            lcd.print(smallChar);
+
+        if (val > 130)
+            lcd.print(bigChar);
+        if (val > 205)
+            lcd.print(bigChar);
     }
 
     void valToDirection_joy(uint8_t val, char bigChar, char smallChar)
@@ -88,11 +60,6 @@ namespace {
             lcd.print(bigChar);
         if (val > 205)
             lcd.print(bigChar);
-    }
-
-    void valToDirection_uint16(uint16_t valToPrint, char bigChar, char smallChar)
-    {
-        valToDirection_int(valToPrint, 1024, bigChar, smallChar);
     }
 
     void printJoystick()
@@ -126,18 +93,42 @@ namespace {
     // print accelerometer info
     void printAccelerometer()
     {
-        lcd.print("Accel-XY: ");
-        valToDirection_uint16(data.accy, 'N', 'S');
-        valToDirection_uint16(data.accx, 'E', 'W');
+        // accx
+        lcd.print("Accel-X: ");
+        if (data.accx < 400) {
+            lcd.print("Left");
+        } else if (data.accx < 600) {
+            lcd.print("Middle");
+        } else {
+            lcd.print("Right");
+        }
 
+        // clear rest of line
+        lcd.print("      ");
+
+        // accy
         lcd.setCursor(0, 1);
-        lcd.print("Accel-Z: ");
-        valToDirection_uint16(data.accz, '+', '-');
-    }
+        lcd.print("Y: ");
+        if (data.accy < 450){
+            lcd.print("Frnt");
+        } else if (data.accy < 650) {
+            lcd.print("Top");
+        } else {
+            lcd.print("Back");
+        }
 
-    bool dataIsValid(){
-        // 255 cannot be done using the real joystick, but it can be used to check if the data is valid
-        return data.joyx != 255 && data.joyy != 255;
+        // accz
+        lcd.print("  Z: ");
+        if (data.accz < 450){
+            lcd.print("Bot");
+        } else if (data.accz < 650) {
+            lcd.print("Side");
+        } else {
+            lcd.print("Top");
+        }
+
+        // clear rest of line
+        lcd.print("   ");
     }
 }
 
@@ -170,19 +161,10 @@ void refresh()
             ? DisplayMode::BUTTONS_ANALOGSTICK
             : DisplayMode::ACCELEROMETER;
         lcd.clear(); // maybe sometimes something could get left over
-
-        /* Possible race condition with button. But it should be very unlikely as the */
+        /* Possible race condition with button, but it should be very unlikely  */
         buttonPressed = false;
     }
 
-    if (!dataIsValid()) {
-        lcd.clear();
-        lcd.print("Nunchuck");
-        lcd.setCursor(0,1);
-        lcd.print("disconnected");
-        Nunchuck::handshake();
-        return;
-    }
 
     if (displayMode == DisplayMode::ACCELEROMETER) {
         printAccelerometer();
