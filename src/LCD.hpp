@@ -1,15 +1,17 @@
 #ifndef LCD_H
 #define LCD_H 1
 
-#include "Nunchuck.hpp"
+#include "Nunchuck.hpp" // for Nunchuck::Data
 #include <Arduino.h> // used for Serial
 #include <LiquidCrystal_I2C.h> // library for communicating with LCD screen
 #include <Wire.h> // arduino I2C
+#include <avr/interrupt.h> // interrupt service routine
 
 // everything related to talking with the LCD.
 // Wrapper around external library that can easily display the nunchuck data
 namespace LCD {
 
+// enum instead of bool so it can be extended later (maybe gesture screen?)
 enum DisplayMode {
     BUTTONS_ANALOGSTICK,
     ACCELEROMETER

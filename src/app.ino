@@ -1,6 +1,7 @@
 #include "LCD.hpp"
 #include "Nunchuck.hpp"
 #include <Arduino.h>
+#define __AVR_ATmega328P__
 
 void print_data_text(Nunchuck::Data data)
 {
@@ -24,6 +25,7 @@ void setup()
 {
     // init serial
     Serial.begin(115200);
+    while (!Serial);  // wait for serial port to connect
     Serial.println("Serial connection ready");
 
     // init nunchuck
