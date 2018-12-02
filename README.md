@@ -9,5 +9,5 @@ When the flat part of the nunchuck connector is at the bottom / the U shaped par
 - Bottom Left: VCC (5V)
 - Bottom Right: SDA (Arduino: A4)
 
---------------- DOKU -------------
+## Doku
 https://docs.google.com/document/d/17sPhZmqco-ob9_1tqnieoP1NTAr2UnXE5XqWIMpFRbY/edit?usp=sharing

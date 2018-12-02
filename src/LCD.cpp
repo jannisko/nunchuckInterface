@@ -1,5 +1,20 @@
 #include "LCD.hpp"
 // main documentation in LCD.hpp
+
+// sadly the interrupt stuff has to be outside of the namespace to work if we do not want to use attachInterrupt
+volatile unsigned long lastDebounceTime = 0;
+volatile bool buttonPressed = false; // set to true by interrupt, reset to false by refresh. Volatile because it is changed "outside of the programm"
+
+ISR(INT0_vect) // executed on button pin change
+{
+    unsigned long time = millis(); // get current time
+    // if last rise was more than 200ms ago
+    if ((time - lastDebounceTime) > 200) {
+        buttonPressed = true; // set flag that btn was pressed
+        lastDebounceTime = time; // save the time of the rise
+    }
+}
+
 namespace LCD {
 
 // anonymous namespace -> everything inside LCD can see the contents, everything outside cannot
@@ -9,38 +24,41 @@ namespace {
 
     Nunchuck::Data data; // currently displayed data
     DisplayMode displayMode; // current display mode
-    bool buttonPressed = false; // set to true by interrupt, reset to false by refresh
 
     // switch between the to views
-    void setDisplayMode(DisplayMode mode)
+    void changeDisplayMode()
     {
-        if (displayMode != mode) {
-            // clear screen on display mode change
-            lcd.clear();
-        }
+        displayMode = displayMode == DisplayMode::ACCELEROMETER
+            ? DisplayMode::BUTTONS_ANALOGSTICK
+            : DisplayMode::ACCELEROMETER;
 
-        displayMode = mode;
-    }
-
-    unsigned long lastDebounceTime = 0;
-    void buttonISR() // executed on button pin change
-    {
-        unsigned long time = millis(); // get current time
-        // if last rise was more than 200ms ago
-        if ((time - lastDebounceTime) > 200) {
-            buttonPressed = true; // set flag that btn was pressed
-            lastDebounceTime = time; // save the time of the rise
-        }
+        // clear screen on display mode change
+        lcd.clear();
     }
 
     // init button, setup interrupt
     void setupButton()
     {
-        pinMode(buttonPin, INPUT);
-        attachInterrupt(
-            digitalPinToInterrupt(buttonPin),
-            buttonISR,
-            RISING);
+        // MANUAL page 71: 10.2.1 "EICRA – External Interrupt Control Register A" and following
+
+        // DDRD – The Port D Data Direction Register
+        // DDD2 == Pin 2
+        DDRD &= ~(1 << DDD2); // Pin 2 (PCINT0-pin) is now an input
+
+        // EICRA – External Interrupt Control Register A
+        // ISC01 ISC00 Description
+        // 0     0      The low level of INT0 generates an interrupt request.
+        // 0     1      Any logical change on INT0 generates an interrupt request.
+        // 1     0      The falling edge of INT0 generates an interrupt request.
+        // 1     1      The rising edge of INT0 generates an interrupt request.
+        // We want to trigger on raise => ISC00 and ISC01 have to be 1
+        EICRA |= (1 << ISC00); // EICRA[ISC00] = 1
+        EICRA |= (1 << ISC01); // EICRA[ISC01] = 1
+
+        // EIMSK - External Interrupt Mask Register
+        EIMSK |= (1 << INT0); // Turn on INT0
+
+        sei(); // global turn on interrupts
     }
 
     // print some whitespace so left over characters get replaced
@@ -131,7 +149,8 @@ void init()
     // initialize the LCD
     Serial.print("LCD: initializing screen... ");
     lcd.begin();
-    setDisplayMode(DisplayMode::BUTTONS_ANALOGSTICK);
+    displayMode = DisplayMode::ACCELEROMETER;
+    changeDisplayMode();
     Serial.println("Done!");
 
     // initialize button interrupt
@@ -153,9 +172,7 @@ void refresh()
     // if a button press is detected by the interrupt, buttonPressed will be true
     if (buttonPressed) {
         // so we have to change the current display mode to the other one
-        displayMode = displayMode == DisplayMode::ACCELEROMETER
-            ? DisplayMode::BUTTONS_ANALOGSTICK
-            : DisplayMode::ACCELEROMETER;
+        changeDisplayMode();
 
         // we did what we had to do on button press, so we have to reset this to false
         buttonPressed = false;
